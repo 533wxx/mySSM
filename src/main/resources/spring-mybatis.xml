@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+			http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+			http://www.springframework.org/schema/aop 
+			http://www.springframework.org/schema/aop/spring-aop-3.0.xsd 
+			http://www.springframework.org/schema/tx
+			http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+			http://www.springframework.org/schema/jee 
+			http://www.springframework.org/schema/jee/spring-jee-3.0.xsd 
+			http://www.springframework.org/schema/context
+			http://www.springframework.org/schema/context/spring-context-3.0.xsd"
+	default-lazy-init="true">
+
+	<import resource="classpath:spring-redis.xml"/>
+	<import resource="classpath:spring-aop-apsectORadvisor.xml"/>
+	<import resource="classpath:spring-aop-logging.xml"/>
+
+	<!-- 自动扫描 -->
+	<context:component-scan base-package="com.pskj.wxx" />
+	<!-- 引入配置文件 -->
+	<bean id="propertyConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location" value="classpath:jdbc.properties" />
+		<property name="ignoreUnresolvablePlaceholders" value="true" />
+	</bean>
+	<!--mysql数据源配置 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="${driver}" />
+		<property name="url" value="${url}" />
+		<property name="username" value="${username}" />
+		<property name="password" value="${password}" />
+		<!-- 初始化连接大小 -->
+		<property name="initialSize" value="${initialSize}"></property>
+		<property name="validationQuery" value="select 1"></property>
+		<property name="testWhileIdle" value="true"></property>
+		<property name="testOnBorrow" value="true"></property>
+		<!-- 连接池最大数量 -->
+		<property name="maxActive" value="${maxActive}"></property>
+		<!-- 连接池最大空闲 -->
+		<property name="maxIdle" value="${maxIdle}"></property>
+		<!-- 连接池最小空闲 -->
+		<property name="minIdle" value="${minIdle}"></property>
+		<!-- 获取连接最大等待时间 -->
+		<property name="maxWait" value="${maxWait}"></property>
+	</bean>
+	<!-- <bean id="chooseDataSource" class="com.jxpskj.yiqi.datasource.DBMultiDataSource">
+		<property name="targetDataSources">
+			<map></map>
+		</property>
+		<property name="defaultTargetDataSource" ref="dataSource" />
+	</bean> -->
+	<!-- spring和MyBatis完美整合，不需要mybatis的配置映射文件 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="configLocation" value="classpath:mybatis-config.xml"></property>
+		<!-- 自动扫描mapping.xml文件 -->
+		<!-- <property name="mapperLocations">
+			<list>
+				<value>classpath:com/pskj/wxx/logging/mapper/*.xml</value>
+				<value>classpath:com/pskj/wxx/admin/mapper/*.xml</value>
+			</list>
+		</property> -->
+	</bean>
+
+	<!-- DAO接口所在包名，Spring会自动查找其下的类 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.pskj.wxx.admin.mapper,com.pskj.wxx.logging.mapper">
+		</property>
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+	</bean>
+
+   <!-- Definition for studentJDBCTemplate bean -->
+   <bean id="studentJDBCTemplate" class="com.pskj.wxx.admin.service.impl.StudentJDBCTemplate">
+      <property name="transactionManager"  ref="transactionManager" /> 
+   </bean>
+
+	<!-- (事务管理)transaction manager, use JtaTransactionManager for global tx -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<!-- < aop:advisor> -->
+	<!-- <aop:config>
+		<aop:pointcut expression="execution(* com.pskj.wxx..*.service..*(..))" id="servicePointCut" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="servicePointCut" />
+	</aop:config> -->
+
+	<!-- 注解方法添加事务 -->
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	
+	<!-- 配置方法添加事务 -->
+	<!-- <tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="get*" read-only="true"/>
+			<tx:method name="is*" read-only="true"/>
+			<tx:method name="find*" read-only="true"/>
+			<tx:method name="*"/>
+		</tx:attributes>
+	</tx:advice> -->
+	
+</beans>  
